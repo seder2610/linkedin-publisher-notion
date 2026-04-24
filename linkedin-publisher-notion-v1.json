@@ -1,0 +1,472 @@
+{
+  "name": "linkedin-publisher-v1",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtMinute": 30
+            },
+            {}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "801ca349-f44a-426b-8743-f9c01dc7f2b3",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2555a5a0-8b4c-4f14-b3d9-33a5f1054953",
+              "name": "page_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "9b59742f-94ff-4c50-a4a2-a648ea544414",
+              "name": "topic",
+              "value": "={{ $json.property_topic || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "d988818c-3d6f-4735-980a-b68dfb775743",
+              "name": "content_raw",
+              "value": "={{ $json.property_content_raw || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "41dd0d7d-8134-47ad-a035-95bb285e6797",
+              "name": "cta_type",
+              "value": "={{ $json.property_cta_type || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "dbcae7f6-e1fe-49e3-aa4a-fd788f4b07e5",
+              "name": "publish_at",
+              "value": "={{ $json.property_publish_at?.start || \"\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "632c64a8-51e5-48c4-8801-9f4bf34e8d37",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "34ce27a7-f3e3-8083-b41c-f9a868bd5436",
+          "mode": "list",
+          "cachedResultName": "LinkedIn Content Queue",
+          "cachedResultUrl": "https://www.notion.so/34ce27a7f3e38083b41cf9a868bd5436"
+        },
+        "returnAll": true,
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Status|select",
+              "condition": "equals",
+              "selectValue": "Ready"
+            },
+            {
+              "key": "Channel|select",
+              "condition": "equals",
+              "selectValue": "LinkedIn"
+            },
+            {
+              "key": "Publish At|date",
+              "condition": "on_or_after",
+              "date": "2026-04-24T19:40:28"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a94177ac-2612-4de0-b3a9-3ef2c397173b",
+      "name": "Get many database pages",
+      "credentials": {
+        "notionApi": {
+          "id": "4rbkLchn0g0a74Te",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Tu es un expert LinkedIn B2B francophone.  Mission: Transformer un brouillon en post LinkedIn performant, clair et humain.  Contraintes: - Ton naturel, direct, non corporate - 1 hook fort en premiere ligne - 8 a 14 lignes max - 1 idee centrale - 1 CTA clair - 3 a 6 hashtags max - Eviter promesses exageres et jargon inutile  Input: - Topic: {{ $json.topic }} - Content brut: {{ $json.content_raw }} - CTA souhaite: {{ $json.cta_type }}  Output JSON uniquement: {   \"hook\": \"\",   \"body\": \"\",   \"cta\": \"\",   \"hashtags\": [\"\", \"\", \"\"],   \"content_final\": \"\" }  Regles: - Le `content_final` doit inclure hook + body + cta + hashtags - Pas de texte hors JSO",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "AIMessagePromptTemplate",
+              "message": "=Tu es un expert LinkedIn B2B francophone.  Mission: Transformer un brouillon en post LinkedIn performant, clair et humain.  Contraintes: - Ton naturel, direct, non corporate - 1 hook fort en premiere ligne - 8 a 14 lignes max - 1 idee centrale - 1 CTA clair - 3 a 6 hashtags max - Eviter promesses exageres et jargon inutile  Input: - Topic: {{ $json.topic }} - Content brut: {{ $json.content_raw }} - CTA souhaite: {{ $json.cta_type }}  Output JSON uniquement: {   \"hook\": \"\",   \"body\": \"\",   \"cta\": \"\",   \"hashtags\": [\"\", \"\", \"\"],   \"content_final\": \"\" }  Regles: - Le `content_final` doit inclure hook + body + cta + hashtags - Pas de texte hors JSON"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        624,
+        0
+      ],
+      "id": "87058219-4887-460d-80a7-dcc31ddc6a13",
+      "name": "Basic LLM Chain",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        208
+      ],
+      "id": "f59cccff-9c17-4274-80d5-458080e677b2",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "0mSlDjB6vA0sno02",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"hook\": \"string\",\n  \"body\": \"string\",\n  \"cta\": \"string\",\n  \"hashtags\": [\"string\", \"string\", \"string\"],\n  \"content_final\": \"string\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        768,
+        224
+      ],
+      "id": "b84fa388-7ab4-42d4-8e65-5dc10e4e7240",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = $json.output || {};\nconst base = $item(0).$node[\"Edit Fields\"].json || {};\n\n// hashtags peut arriver en array OU en objet\nlet rawTags = [];\nif (Array.isArray(out.hashtags)) {\n  rawTags = out.hashtags;\n} else if (out.hashtags && typeof out.hashtags === \"object\") {\n  rawTags = Object.values(out.hashtags);\n}\n\nconst hashtags = rawTags.filter(Boolean).map(h => String(h).trim());\nconst tagsLine = hashtags.length\n  ? hashtags.map(h => h.startsWith('#') ? h : `#${h.replace(/\\s+/g, '')}`).join(' ')\n  : '';\n\nconst contentFinal = out.content_final && String(out.content_final).trim()\n  ? String(out.content_final).trim()\n  : [out.hook, out.body, out.cta, tagsLine].filter(Boolean).join('\\n\\n');\n\nreturn [{\n  json: {\n    page_id: base.page_id || '',\n    topic: base.topic || '',\n    content_raw: base.content_raw || '',\n    cta_type: base.cta_type || '',\n    publish_at: base.publish_at || '',\n    hook: out.hook || '',\n    body: out.body || '',\n    cta: out.cta || '',\n    hashtags: tagsLine,\n    content_final: contentFinal,\n    sent_at: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        0
+      ],
+      "id": "9d3d0a8f-2766-499e-b716-1c30e7510773",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "fromEmail": "sederaandriamanga@gmail.com",
+        "toEmail": "andriamangasedera@gmail.com",
+        "subject": "=Post LinkedIn prêt - {{ $json.property_topic }}\n\n",
+        "html": "=Post LinkedIn prêt à publier\n\nTopic: {{ $json.property_topic }}\nCTA: {{ $json.property_cta_type }}\nDate cible: {{ $json.property_publish_at?.start }}\n\n--------------------\n{{ $json.property_content_final }}\n--------------------",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1552,
+        0
+      ],
+      "id": "f901a32d-b014-47bd-b839-e0a41e5591de",
+      "name": "Send an Email",
+      "webhookId": "f0e93cca-d21c-4682-b5cc-5b083705ea40",
+      "credentials": {
+        "smtp": {
+          "id": "G9fGU21txTQzyrCU",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "04b5df76-2f4c-4921-ac04-aa166398d9fd",
+              "name": "page_id",
+              "value": "={{ $node[\"Code in JavaScript\"].json.page_id }}",
+              "type": "string"
+            },
+            {
+              "id": "8708dea5-e251-460e-b332-7fa5a40b9f90",
+              "name": "sent_at",
+              "value": "={{ $node[\"Code in JavaScript\"].json.sent_at }}",
+              "type": "string"
+            },
+            {
+              "id": "fb34d0d2-dcc4-469b-b94b-8ea99900652c",
+              "name": "content_final",
+              "value": "={{ $('Code in JavaScript').item.json.content_final }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1760,
+        0
+      ],
+      "id": "02f3e3e7-6330-464c-b400-73d5382e104b",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.page_id }}\n\n",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|select",
+              "selectValue": "Sent"
+            },
+            {
+              "key": "Sent At |date",
+              "date": "={{ $json.sent_at }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        2032,
+        0
+      ],
+      "id": "a81ca1e9-2bde-4ae5-a96d-816acf6f2b73",
+      "name": "Notion Update 2",
+      "credentials": {
+        "notionApi": {
+          "id": "4rbkLchn0g0a74Te",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.page_id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Content Final|rich_text",
+              "textContent": "={{ $json.content_final }}"
+            },
+            {
+              "key": "Status|select",
+              "selectValue": "Queued"
+            },
+            {
+              "key": "Error Reason|rich_text",
+              "textContent": "=``"
+            },
+            {
+              "key": "n8n Run ID|rich_text",
+              "textContent": "={{ $execution.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1280,
+        0
+      ],
+      "id": "88025278-3a85-496b-b245-d9997b3ed45f",
+      "name": "Notion Update 1",
+      "credentials": {
+        "notionApi": {
+          "id": "4rbkLchn0g0a74Te",
+          "name": "Notion account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many database pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many database pages": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Notion Update 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an Email": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Notion Update 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion Update 2": {
+      "main": [
+        []
+      ]
+    },
+    "Notion Update 1": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fce1b82d-2ed1-4698-ac8b-78fea152343f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8de05d949969a659e072d4bcb18833217088befbaf87b7c837dff10c9d96ecd7"
+  },
+  "id": "faBMA53tbZ5dt1mr",
+  "tags": []
+}
