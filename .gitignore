@@ -1,0 +1,8 @@
+# Secrets / environnements locaux
+.env
+.env.*
+*.pem
+*.key
+
+# Fichiers temporaires
+.DS_Store
