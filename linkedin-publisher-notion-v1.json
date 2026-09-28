@@ -77,7 +77,7 @@
           "value": "34ce27a7-f3e3-8083-b41c-f9a868bd5436",
           "mode": "list",
           "cachedResultName": "LinkedIn Content Queue",
-          "cachedResultUrl": "https://www.notion.so/34ce27a7f3e38083b41cf9a868bd5436"
+          "cachedResultUrl": "https://www.notion.so/REMPLACER_PAR_ID_BASE_NOTION"
         },
         "returnAll": true,
         "filterType": "manual",
@@ -197,8 +197,8 @@
     },
     {
       "parameters": {
-        "fromEmail": "sederaandriamanga@gmail.com",
-        "toEmail": "andriamangasedera@gmail.com",
+        "fromEmail": "ton-email@exemple.com",
+        "toEmail": "destinataire@exemple.com",
         "subject": "=Post LinkedIn prêt - {{ $json.property_topic }}\n\n",
         "html": "=Post LinkedIn prêt à publier\n\nTopic: {{ $json.property_topic }}\nCTA: {{ $json.property_cta_type }}\nDate cible: {{ $json.property_publish_at?.start }}\n\n--------------------\n{{ $json.property_content_final }}\n--------------------",
         "options": {}
