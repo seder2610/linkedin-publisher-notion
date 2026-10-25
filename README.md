@@ -1,58 +1,76 @@
-# LinkedIn Publisher Notion V1 (n8n)
+# Préparation de posts LinkedIn depuis Notion (n8n + OpenAI)
 
-Automatisation V1 pour publier (ou preparer publication) sur LinkedIn a partir d'une database Notion.
+> **EN:** Draft n8n workflow that picks "Ready" LinkedIn ideas from a Notion database, turns each raw note into a structured post (hook, body, CTA, hashtags) with an LLM, emails the final text and updates the Notion status.
+> **EN:** It does not post to LinkedIn: publishing stays manual, a deliberate choice because LinkedIn's API is restrictive for personal profiles.
+> **EN:** Status: draft, not tested end to end.
 
-## Objectif
+**FR :** Workflow n8n (brouillon) qui lit dans Notion les idées de post au statut « Ready », génère un post LinkedIn structuré avec un LLM, envoie le texte final par email et met à jour le statut dans Notion. La publication reste manuelle.
 
-Passer d'idees brutes dans Notion a des posts LinkedIn prets a publier, avec planning et suivi.
+## Problème → Solution → Pour qui
 
-## Principe V1 (safe)
+- **Problème :** les idées de posts restent à l'état de notes brutes, et la mise en forme (accroche, appel à l'action, hashtags) prend du temps.
+- **Solution :** une file Notion alimente un prompt qui renvoie un JSON structuré ; le post final est envoyé par email et enregistré dans Notion.
+- **Pour qui :** indépendants et consultants qui gèrent leur contenu LinkedIn dans Notion. La publication automatique (API LinkedIn) est une évolution possible, pas incluse.
 
-LinkedIn est parfois limite pour les profils personnels via API.  
-La V1 privilegie une approche fiable:
+## Résultat
 
-1. Detecter les contenus `Ready` dans Notion
-2. Generer/ameliorer le post (hook + body + CTA + hashtags)
-3. Planifier selon `publish_at`
-4. Envoyer une notification "Pret a publier" avec texte final
-5. Marquer dans Notion (`Queued` -> `Published` manuel ou `Sent`)
+Aucune sortie générée n'est versionnée. Format produit par le parseur, assemblé en un texte `Content Final` : `hook`, `body`, `cta`, `hashtags`, `content_final`. L'email reçu a pour objet « Post LinkedIn prêt - {topic} ».
 
-## Pourquoi cette V1 est utile
+<!-- TODO capture: une ligne Notion avant/après (Status Ready → Sent, Content Final rempli) et l'email reçu -->
 
-- Zero friction de production
-- Moins de risque de blocage API LinkedIn
-- Tu gardes le controle final avant publication
-- Tu peux evoluer vers V2 auto-post plus tard
+## Architecture
+
+```mermaid
+flowchart LR
+    S[Planification<br/>toutes les heures, minute 30] --> G[Notion : pages Ready, Channel = LinkedIn]
+    G --> F[Normaliser les champs]
+    F --> L[Basic LLM Chain<br/>OpenAI] 
+    P[Structured Output Parser] -. parser .-> L
+    L --> C[Code : assembler le post]
+    C --> U1[Notion : Content Final + Status = Queued]
+    C --> M[Email : post prêt]
+    M --> U2[Notion : Status = Sent + Sent At]
+```
+
+## Prérequis
+
+- n8n avec les nœuds LangChain ; version minimale non vérifiée.
+- Credentials : Notion, OpenAI, SMTP (envoi de l'email).
+- Une base Notion « LinkedIn Content Queue » (`notion-schema.md`).
+- Coût : un appel LLM par post ; non calculé.
+
+## Installation
+
+1. Créer la base Notion selon `notion-schema.md` et la partager avec l'intégration.
+2. Importer `linkedin-publisher-notion-v1.json` dans n8n.
+3. Remplacer `<YOUR_NOTION_DATABASE_ID>`, `<YOUR_SENDER_EMAIL>` et `<YOUR_EMAIL>` (voir tableau).
+4. Associer les credentials Notion, OpenAI et SMTP.
+5. Dans le nœud de lecture Notion, remplacer la date fixe du filtre `Publish At` (voir limites).
+6. Mettre une page de test à `Status = Ready`, `Channel = LinkedIn`, puis **Execute workflow**.
+7. Vérifier l'email et le statut Notion, puis activer le workflow.
+
+## Configuration
+
+| Placeholder | Où le trouver | Nœud concerné |
+|---|---|---|
+| `<YOUR_NOTION_DATABASE_ID>` | URL de la base Notion (32 caractères) | Get many database pages |
+| `<YOUR_SENDER_EMAIL>` | adresse d'expéditeur de votre SMTP | Send an Email (From) |
+| `<YOUR_EMAIL>` | adresse qui reçoit le post prêt | Send an Email (To) |
+| Credentials Notion, OpenAI, SMTP | n8n → Credentials | nœuds correspondants |
+
+## Statut et limites
+
+- **Statut : brouillon, non testé de bout en bout.** Le fichier JSON `linkedin-publisher-notion-v1.json` est un export n8n du workflow `linkedin-publisher-v1`.
+- Le filtre de lecture Notion contient une **date fixe** (`Publish At` après le 2026-04-24) au lieu de « maintenant » comme décrit dans `n8n-setup-guide.md` : à modifier avant usage.
+- La planification du JSON est horaire (minute 30), alors que le guide cite des horaires fixes (8h30, 12h30, 18h30).
+- Le guide décrit une branche d'erreur (`Status = Error`) qui n'existe pas dans le JSON exporté.
+- Le nœud de mise à jour écrit la propriété `Sent At ` avec un espace final : nommez la propriété ainsi, ou corrigez le nœud.
+- Le workflow ne publie pas sur LinkedIn ; une publication via l'API nécessite généralement des droits supplémentaires (souvent une page entreprise).
 
 ## Fichiers
 
-- `notion-schema.md` : structure de la database Notion
-- `n8n-setup-guide.md` : construction node par node
-- `prompt-linkedin.md` : prompt de generation/optimisation post
+`notion-schema.md` (schéma de la base), `n8n-setup-guide.md` (construction pas à pas), `prompt-linkedin.md` (prompt).
 
-## Definition of done
+## Licence
 
-- 1 item Notion `Ready` detecte
-- post final genere automatiquement
-- notification recue (Slack/Email/Telegram)
-- statut Notion mis a jour correctement
-
-## Export GitHub (ce que tu pushes)
-
-Dans n8n :
-1. Ouvre le workflow `linkedin-publisher-v1`
-2. Menu `...` -> `Download` (export JSON)
-3. Renomme le fichier en `linkedin-publisher-notion-v1.json`
-4. Place-le dans ce dossier : `Output/linkedin-publisher-notion-v1/`
-5. Commit + push sur ton repo GitHub (nouveau repo dédié recommandé)
-
-Note : je ne peux pas generer un JSON fidele sans ton export n8n (IDs de nodes, versions). Le fichier exporte est la source de verite.
-
-## Roadmap (ne pas perdre l objectif final)
-
-**Objectif final** : ne plus aller sur LinkedIn pour publier.
-
-- **V1 (actuelle)** : generation + file Notion + notification (fiabilite maximale)
-- **V2 (auto-post)** : publication via **LinkedIn API** (souvent necessite une **Organization Page** / produits LinkedIn + droits) OU via un connecteur officiel si disponible sur ton compte
-
-Regle simple : tant que tu postes en **profil personnel**, l API LinkedIn est souvent plus contrainte qu en **page entreprise**. Si ton objectif est 100% sans UI LinkedIn, on choisit volontairement le canal le plus compatible API (souvent Page) puis on branche un node `HTTP Request` / node LinkedIn selon ce qui est dispo sur ton stack n8n.
+MIT, voir [LICENSE](LICENSE).
